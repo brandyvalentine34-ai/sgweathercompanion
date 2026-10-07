@@ -10,10 +10,13 @@ import {
   CheckCircle2,
   AlertTriangle,
   Radio,
+  Search,
+  KeyRound,
 } from 'lucide-react';
 import {
   AirQualitySnapshot,
   ApiHealthReport,
+  OneMapSearchResult,
   RegionName,
   REGIONS_LIST,
   REGION_LABELS,
@@ -61,6 +64,11 @@ export default function App() {
   // /api/health.js Monitor State
   const [healthReport, setHealthReport] = useState<ApiHealthReport | null>(null);
   const [healthLoading, setHealthLoading] = useState<boolean>(false);
+
+  // Singapore OneMap Postal Code / Building Search State
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<OneMapSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
 
   // Fetch real-time NEA PSI & PM2.5 data directly (with server proxy fallback)
   const fetchAirQualityData = useCallback(async () => {
@@ -259,6 +267,50 @@ export default function App() {
     setGeoStatus('locked');
     setGeoFeedback(
       `Locked to ${preset.name} · ${distanceKm.toFixed(1)} km from ${REGION_LABELS[region].name}`
+    );
+  };
+
+  // Handle OneMap Postal Code / Building Search
+  const handleOneMapSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearchLoading(true);
+    try {
+      const res = await fetch(`/api/onemap/search?searchVal=${encodeURIComponent(searchQuery.trim())}`);
+      if (!res.ok) throw new Error('OneMap search failed');
+      const data = await res.json();
+      const results: OneMapSearchResult[] = Array.isArray(data?.results) ? data.results.slice(0, 5) : [];
+      setSearchResults(results);
+      if (results.length === 0) {
+        setGeoFeedback(`No Singapore address or postal code matched "${searchQuery.trim()}"`);
+      }
+    } catch {
+      setGeoFeedback('Unable to query OneMap Elastic Search right now.');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSelectOneMapResult = (item: OneMapSearchResult) => {
+    if (!activeSnapshot) return;
+    const lat = Number(item.LATITUDE);
+    const lng = Number(item.LONGITUDE);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+
+    const { region, distanceKm } = findNearestRegion(lat, lng, activeSnapshot.regions);
+    const label = item.BUILDING && item.BUILDING !== 'NIL' ? item.BUILDING : item.SEARCHVAL;
+    setSelectedRegion(region);
+    setUserLocation({
+      latitude: lat,
+      longitude: lng,
+      label: `${label} (${item.POSTAL !== 'NIL' ? `S${item.POSTAL}` : item.ROAD_NAME})`,
+      distanceKm: Number(distanceKm.toFixed(1)),
+      nearestRegion: region,
+    });
+    setSearchResults([]);
+    setGeoStatus('locked');
+    setGeoFeedback(
+      `OneMap locked: ${item.ADDRESS} · ${distanceKm.toFixed(1)} km from ${REGION_LABELS[region].name}`
     );
   };
 
@@ -516,6 +568,62 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* OneMap Postal Code / Building Search Input */}
+              <div className="relative">
+                <form onSubmit={handleOneMapSearch} className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="OneMap Search: SG Postal Code (e.g. 238801) or Building..."
+                      className="w-full bg-[#07090E] border border-slate-800 focus:border-cyan-500 rounded pl-3 pr-8 py-1.5 text-xs text-slate-200 font-mono outline-none transition-colors"
+                    />
+                    {searchResults.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchResults([])}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-500 hover:text-slate-300"
+                      >
+                        ESC
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={searchLoading}
+                    className="px-3 py-1.5 bg-slate-900 border border-slate-700 hover:border-cyan-500/60 text-xs font-mono text-slate-200 rounded transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    {searchLoading ? '...' : 'Find'}
+                  </button>
+                </form>
+
+                {searchResults.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-1 z-30 bg-[#0B0E17] border border-slate-700 rounded shadow-xl divide-y divide-slate-800 max-h-48 overflow-y-auto">
+                    {searchResults.map((item, idx) => (
+                      <button
+                        key={`${item.POSTAL}-${idx}`}
+                        type="button"
+                        onClick={() => handleSelectOneMapResult(item)}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-800/80 transition-colors flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div className="truncate">
+                          <div className="font-medium text-white truncate">{item.SEARCHVAL}</div>
+                          <div className="text-[11px] font-mono text-slate-400 truncate">
+                            {item.ADDRESS}
+                          </div>
+                        </div>
+                        {item.POSTAL && item.POSTAL !== 'NIL' && (
+                          <span className="text-[10px] font-mono text-cyan-400 shrink-0">
+                            S({item.POSTAL})
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {geoFeedback && (
@@ -1095,6 +1203,36 @@ export default function App() {
               Running initial diagnostic probe on /api/health.js...
             </div>
           )}
+
+          {/* OneMap Vercel Environment Variable Status Bar */}
+          <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-semibold text-white">
+                <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+                <span>SLA OneMap Token Integration (/api/onemap.js)</span>
+              </div>
+              <p className="text-[11px] font-sans text-slate-400">
+                Reads <code className="font-mono text-slate-200">ONEMAP_TOKEN</code> (or auto-mints a 3-day token via <code className="font-mono text-slate-200">ONEMAP_EMAIL</code> &amp; <code className="font-mono text-slate-200">ONEMAP_PASSWORD</code>) from Vercel Environment Variables.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 bg-[#07090E] border border-slate-800 px-3.5 py-2 rounded">
+              <span className="text-slate-400">Token Status:</span>
+              {healthReport?.onemap?.tokenCached ? (
+                <span className="text-emerald-400 font-semibold">
+                  ● ACTIVE ({healthReport.onemap.source || 'Vercel Env'})
+                </span>
+              ) : healthReport?.onemap?.configured ? (
+                <span className="text-cyan-400 font-semibold">
+                  ◆ CREDENTIALS CONFIGURED
+                </span>
+              ) : (
+                <span className="text-slate-300">
+                  ○ AWAITING VERCEL ENV (<code className="text-cyan-400">ONEMAP_TOKEN</code>)
+                </span>
+              )}
+            </div>
+          </div>
         </section>
       </main>
 

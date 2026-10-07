@@ -69,6 +69,7 @@ export const SingaporeAirMap: React.FC<SingaporeAirMapProps> = ({
   onMapClickLocation,
 }) => {
   const sgCenter: [number, number] = [1.3521, 103.8198];
+  const [basemapStyle, setBasemapStyle] = React.useState<'onemap' | 'carto'>('onemap');
 
   return (
     <div className="relative h-full w-full min-h-[420px] bg-[#07090E] overflow-hidden select-none">
@@ -76,16 +77,23 @@ export const SingaporeAirMap: React.FC<SingaporeAirMapProps> = ({
         center={sgCenter}
         zoom={11}
         minZoom={10}
-        maxZoom={15}
+        maxZoom={18}
         scrollWheelZoom={true}
         zoomControl={false}
         className="h-full w-full z-10 cursor-crosshair"
       >
-        {/* High-contrast CARTO Dark Matter scientific basemap */}
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a> · NEA SG'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
+        {/* Official Singapore SLA OneMap Night Basemap or CARTO Dark Matter */}
+        {basemapStyle === 'onemap' ? (
+          <TileLayer
+            attribution='&copy; <a href="https://www.onemap.gov.sg">Singapore Land Authority (OneMap)</a> · NEA SG'
+            url="https://www.onemap.gov.sg/maps/tiles/Night/{z}/{x}/{y}.png"
+          />
+        ) : (
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a> · NEA SG'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          />
+        )}
 
         <MapController
           selectedRegion={selectedRegion}
@@ -298,6 +306,32 @@ export const SingaporeAirMap: React.FC<SingaporeAirMapProps> = ({
             <span>{activeMetric === 'psi' ? '>300 Hazardous' : '>250 V.High'}</span>
           </span>
         </div>
+      </div>
+
+      {/* Top-left basemap tile switcher (SLA OneMap Night vs CARTO Dark) */}
+      <div className=" absolute top-3 left-3 z-20 flex items-center gap-1 bg-[#0B0E17]/90 border border-slate-800 p-1 rounded text-[11px] font-mono">
+        <button
+          type="button"
+          onClick={() => setBasemapStyle('onemap')}
+          className={`px-2 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
+            basemapStyle === 'onemap'
+              ? 'bg-cyan-500 text-slate-950 font-semibold'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          SG OneMap Night
+        </button>
+        <button
+          type="button"
+          onClick={() => setBasemapStyle('carto')}
+          className={`px-2 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
+            basemapStyle === 'carto'
+              ? 'bg-cyan-500 text-slate-950 font-semibold'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          CARTO Telemetry
+        </button>
       </div>
 
       {/* Top-right interactive map instruction hint */}

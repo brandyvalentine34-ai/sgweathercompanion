@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    { "source": "/api/health.js", "destination": "/api/health" },
+    { "source": "/api/psi.js", "destination": "/api/psi" },
+    { "source": "/api/pm25.js", "destination": "/api/pm25" },
+    { "source": "/api/air-quality.js", "destination": "/api/air-quality" },
+    { "source": "/api/onemap/search", "destination": "/api/onemap" },
+    { "source": "/api/onemap/revgeocode", "destination": "/api/onemap" },
+    { "source": "/api/onemap/token", "destination": "/api/onemap" },
+    { "source": "/api/onemap/status", "destination": "/api/onemap" }
+  ]
+}

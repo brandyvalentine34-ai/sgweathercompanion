@@ -1,3 +1,5 @@
+import { getOneMapTokenStatus } from './onemap.js';
+
 const NEA_ENDPOINTS = {
   psi: 'https://api-open.data.gov.sg/v2/real-time/api/psi',
   pm25: 'https://api-open.data.gov.sg/v2/real-time/api/pm25',
@@ -75,6 +77,7 @@ export async function getApiHealthReport() {
       psi: psiProbe,
       pm25: pm25Probe,
     },
+    onemap: getOneMapTokenStatus(),
   };
 }
 

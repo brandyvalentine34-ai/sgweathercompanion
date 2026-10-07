@@ -50,6 +50,25 @@ export interface ApiProbeResult {
   error: string | null;
 }
 
+export interface OneMapTokenStatus {
+  endpoint: string;
+  configured: boolean;
+  tokenCached: boolean;
+  source?: string;
+  expiresAt: string | null;
+}
+
+export interface OneMapSearchResult {
+  SEARCHVAL: string;
+  BLK_NO: string;
+  ROAD_NAME: string;
+  BUILDING: string;
+  ADDRESS: string;
+  POSTAL: string;
+  LATITUDE: string;
+  LONGITUDE: string;
+}
+
 export interface ApiHealthReport {
   overallStatus: 'NOMINAL' | 'DEGRADED' | 'CRITICAL';
   checkedAt: string;
@@ -58,6 +77,7 @@ export interface ApiHealthReport {
     psi: ApiProbeResult;
     pm25: ApiProbeResult;
   };
+  onemap?: OneMapTokenStatus;
 }
 
 export type AirQualityBandId = 'GOOD' | 'MODERATE' | 'UNHEALTHY' | 'VERY_UNHEALTHY' | 'HAZARDOUS';
