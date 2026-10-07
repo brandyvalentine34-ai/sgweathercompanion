@@ -1,0 +1,6 @@
+{
+  "name": "SG Air Quality and Weather Companion",
+  "description": "Real-time environmental monitoring dashboard for Singapore PSI and PM2.5 air quality readings powered by NEA open data APIs, featuring interactive color-coded maps and atmospheric haze simulation.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
